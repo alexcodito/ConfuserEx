@@ -24,6 +24,11 @@ namespace Confuser.Core.Project {
 		public string Path { get; set; }
 
 		/// <summary>
+		///     Raw assembly data to be used instead of the path.
+		/// </summary>
+		public byte[] RawData { get; set; }
+
+		/// <summary>
 		///     Indicates whether this module is external and should not be obfuscated.
 		/// </summary>
 		public bool IsExternal { get; set; }
@@ -91,6 +96,11 @@ namespace Confuser.Core.Project {
 		/// <param name="context">The resolved module's context.</param>
 		/// <returns>The resolved module.</returns>
 		public ModuleDefMD Resolve(string basePath, ModuleContext context = null) {
+			if (RawData != null) {
+				var module = ModuleDefMD.Load(RawData, context);
+				module.Location = System.IO.Path.Combine(basePath, Path);
+				return module;
+			}
 			if (basePath == null)
 				return ModuleDefMD.Load(Path, context);
 			return ModuleDefMD.Load(System.IO.Path.Combine(basePath, Path), context);
@@ -105,6 +115,8 @@ namespace Confuser.Core.Project {
 		/// </param>
 		/// <returns>The loaded module.</returns>
 		public byte[] LoadRaw(string basePath) {
+			if (RawData != null)
+				return RawData;
 			if (basePath == null)
 				return File.ReadAllBytes(Path);
 			return File.ReadAllBytes(System.IO.Path.Combine(basePath, Path));
@@ -217,7 +229,7 @@ namespace Confuser.Core.Project {
 				SNPubSigKeyPath = elem.Attributes["snPubSigKey"].Value.NullIfEmpty();
 			else
 				SNPubSigKeyPath = null;
-			
+
 			Rules.Clear();
 			foreach (XmlElement i in elem.ChildNodes.OfType<XmlElement>()) {
 				var rule = new Rule();
@@ -241,6 +253,7 @@ namespace Confuser.Core.Project {
 		public ProjectModule Clone() {
 			var ret = new ProjectModule();
 			ret.Path = Path;
+			ret.RawData = RawData;
 			ret.IsExternal = IsExternal;
 			ret.SNKeyPath = SNKeyPath;
 			ret.SNPubKeyPath = SNPubKeyPath;
